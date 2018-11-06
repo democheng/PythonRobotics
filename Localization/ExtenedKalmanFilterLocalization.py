@@ -66,7 +66,6 @@ def F_transition(state, control):
     '''
     state = state.reshape(len(state), 1)
     control = control.reshape(len(control), 1)
-    # print('---F_transition---')
     global time_step
     F = np.eye(4)
     F[3, 3] = 0
@@ -74,7 +73,6 @@ def F_transition(state, control):
                 [time_step * math.sin(state[2]), 0.0], 
                 [0, time_step], 
                 [1.0, 0.0]])
-    # print('B = \n', B)
     state_prediction = F @ state + B @ control
     return state_prediction
 #checked
@@ -82,14 +80,12 @@ def jacobian_F_transition(state, control):
     state = state.reshape(len(state), 1)
     control = control.reshape(len(control), 1)
     global time_step
-    # print('---jacobian_F_transition---')
     sin_yaw = math.sin(state[2])
     cos_yaw = math.cos(state[2])
     jF = np.array([[1.0, 0.0, 0.0, 0.0], 
                 [0.0, 1.0, 0.0, 0.0], 
                 [-time_step * control[0] * sin_yaw, time_step * control[0] * cos_yaw, 1.0, 0.0], 
                 [time_step * cos_yaw, time_step * sin_yaw, 0.0, 1.0]])
-    # print('jF:\n', jF)
     return jF
 
 #checked
@@ -98,7 +94,6 @@ def H_observation(state):
     :param time: current system time
     :return: control parameters
     '''
-    # print('---H_observation---')
     H = np.eye(4)
     observation = H @ state
     return observation
@@ -108,7 +103,6 @@ def jacobian_H_observation(state):
     :param state: state of prediction
     :return: jacobian_H_observation
     '''
-    # print('---jacobian_H_observation---')
     jH = np.eye(4)
     return jH
 
@@ -119,7 +113,6 @@ def observation_noise(groundtruth, dead_reckoning, control):
     :param control: control parameters
     :return: jacobian_H_observation
     '''
-    # print('---observation_noise---')
     groundtruth = groundtruth.reshape(len(groundtruth), 1)
     dead_reckoning = dead_reckoning.reshape(len(dead_reckoning), 1)
     control = control.reshape(len(control), 1)
@@ -131,7 +124,6 @@ def observation_noise(groundtruth, dead_reckoning, control):
     # test1 = np.ones((2, 1))
     # control = control + Qsigma @ test1
     control = control + Qsigma @ np.random.randn(2,1)
-    # sys.exit(0)
     # Dead Reckoning
     dead_reckoning = F_transition(dead_reckoning, control)
     # test2 = np.ones((4, 1))
@@ -147,8 +139,6 @@ def ExtendedKalmanFilterLocalization():
     global time_step
     time_step = 0.1
     system_times = np.arange(time_step, time_end + time_step, time_step)
-    # print(system_times)
-    # sys.exit(0)
     # save all the variables for plotting
     result = {'time':[], 
             'groundtruth':[], 
