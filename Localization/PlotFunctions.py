@@ -42,4 +42,4 @@ def draw_result(result):
     ax.plot(state_position[:, 0], state_position[:, 1], color = 'b', label='EKF')
     ax.legend()
     plt.show()
-    input("Press Enter to continue...")
+    plt.pause(0)
