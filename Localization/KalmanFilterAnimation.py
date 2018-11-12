@@ -19,6 +19,11 @@ def gaussian_histogram(bin_num, mu, sig):
     data[1, :] = y
     return data
 
+def gaussian_entropy(mu, var):
+    sig = np.sqrt(var)
+    entropy = np.log(sig * np.sqrt(2 * np.pi * np.e))
+    return np.array([[mu],[entropy]])
+
 def gaussian_update(mu0, var0, mu1, var1):
     mu = (mu0 * var1 + mu1 * var0) / (var0 + var1)
     std = 1.0 / (1.0 / var0 + 1.0 / var1)
@@ -60,13 +65,14 @@ def draw_robot(cur_pos):
 
 
 class update_prob(object):
-    def __init__(self, ax, trajectory, doors, total_length, doors_geometry, robot_geometry):
+    def __init__(self, ax, trajectory, doors, total_length, doors_geometry, robot_geometry, robot_pos_entropy):
         # The first is for robot, the second is for the doors
         self.lines = [ax.plot([], [], color='b')[0],   # robot_pos_prob
                     ax.plot([], [], color='g')[0],     # door_pos_prob
                     ax.plot([], [], color='black')[0], # road
                     ax.plot([], [], color='black')[0], # doors
-                    ax.plot([], [], color='r')[0]]     # robot
+                    ax.plot([], [], color='r')[0], 
+                    ax.plot([], [], color='gray')[0]]     # robot entropy
         self.ax = ax
         self.ax.grid(True)
         self.trajectory = trajectory
@@ -78,11 +84,15 @@ class update_prob(object):
         for door in doors_geometry[1:]:
             self.doors_geometry = np.concatenate((self.doors_geometry, door), axis=1)
         self.robot_geometry = robot_geometry
-
+        
+        self.robot_pos_entropy = robot_pos_entropy[0]
+        for entropy in robot_pos_entropy[1:]:
+            self.robot_pos_entropy = np.concatenate((self.robot_pos_entropy, entropy), axis=1)
+        self.robot_pos_entropy[1,:] -= self.robot_pos_entropy[1,np.argmax(self.robot_pos_entropy[1,:])]
         ## Setting the axes properties
-        ax.set_xlim([-1, 50])    
+        ax.set_xlim([-0, 50])
         ax.set_xlabel('X')
-        ax.set_ylim([0, 3.5])
+        ax.set_ylim([-1.5, 3.5])
         ax.set_ylabel('Y')
         ax.set_title('kalman filter')
 
@@ -96,9 +106,10 @@ class update_prob(object):
         # watching new realizations of the process
         self.lines[0].set_data(self.trajectory[i])
         self.lines[1].set_data(self.doors)
-        self.lines[2].set_data([-1, self.total_length], [1.5, 1.5])
+        self.lines[2].set_data([0, self.total_length], [1.5, 1.5])
         self.lines[3].set_data(self.doors_geometry)
         self.lines[4].set_data(self.robot_geometry[i])
+        self.lines[5].set_data(self.robot_pos_entropy[0, 0:i], self.robot_pos_entropy[1, 0:i])
         return self.lines
 
 def main():
@@ -122,26 +133,27 @@ def main():
 
     robot_trajectory = []
     robot_geometry = []
+    robot_pos_entropy = []
     for step in range(step_num):
         # do measure, update
         for door_pos, door_var in zip(door_positions, door_vars):
             if np.abs(cur_pos - door_pos) < 0.01:
                 cur_pos, cur_var = gaussian_update(cur_pos, cur_var, door_pos, door_var)
+                robot_pos_entropy.append(gaussian_entropy(cur_pos, cur_var))
                 robot_trajectory.append(gaussian_histogram(smp_num, cur_pos, cur_var))
                 robot_geometry.append(draw_robot(cur_pos))
         # do move, predict
         cur_pos, cur_var = gaussin_predict(cur_pos, cur_var, step_length, step_var)
+        robot_pos_entropy.append(gaussian_entropy(cur_pos, cur_var))
         robot_trajectory.append(gaussian_histogram(smp_num, cur_pos, cur_var))
         robot_geometry.append(draw_robot(cur_pos))
-    
     # more specifical geometry
-    
+    # print(robot_trajectory)
     # First set up the figure, the axis, and the plot element we want to animate
     fig = plt.figure()
     ax = plt.axes(xlim=(0, 2), ylim=(0, 20))
-    line, = ax.plot([], [])
-    lines = []
-    up = update_prob(ax, robot_trajectory, doors, total_length, doors_geometry, robot_geometry)
+
+    up = update_prob(ax, robot_trajectory, doors, total_length, doors_geometry, robot_geometry, robot_pos_entropy)
     # call the animator.  blit=True means only re-draw the parts that have changed.
     anim = FuncAnimation(fig, up, frames=len(robot_trajectory), interval=200, blit=True)
     # anim.save('kalmanfilter.gif', dpi=80, writer='imagemagick')
