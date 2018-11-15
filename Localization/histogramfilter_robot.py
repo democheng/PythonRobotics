@@ -311,7 +311,7 @@ def main():
     start_position = 0.0
     end_position = 50.0
     velocity = 0.5
-    motion_noise = np.sqrt(1.2)
+    motion_noise = np.sqrt(0.1)
     measurement_noise = np.sqrt(0.5)
     sensor_range = 0.1
     doors = np.array([5.0, 10.0, 15.0, 25.0, 40.0])
@@ -369,7 +369,7 @@ def main():
                 d_positions_with_noise, d_doors_with_noise, d_entropy)
     # call the animator.  blit=True means only re-draw the parts that have changed.
     anim = FuncAnimation(fig, ud, frames=loop_num, interval=200, blit=True)
-    # anim.save('kalmanfilter.gif', dpi=80, writer='imagemagick')
+    # anim.save('histogramfilter.gif', dpi=80, writer='imagemagick')
     plt.show()
 
 if __name__ == '__main__':
