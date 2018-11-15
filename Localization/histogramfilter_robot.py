@@ -1,22 +1,80 @@
 import sys
 import math
+import copy
 import numpy as np
 from scipy.stats import norm
+from scipy.ndimage import gaussian_filter1d
 
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-class kfrobot(object):
+class grid_map():
+    def __init__(self, minx, maxx, resolution):
+        self.minx = minx
+        self.maxx = maxx
+        self.resolution = resolution
+        self.widthx = int(round((self.maxx - self.minx) / self.resolution))
+        self.probability = np.ones(self.widthx) * (1.0 / self.widthx)
+    
+    def init(self):
+        self.minx = 0.0
+        self.maxx = 2.5
+        self.resolution = 0.5
+        self.widthx = int(round((self.maxx - self.minx) / self.resolution))
+        self.probability = np.ones(self.widthx) * (1.0 / self.widthx)
+    
+    def print(self):
+        print('[minx, max] = [', self.minx, ',', self.maxx, ']')
+        print('resolution = ', self.resolution)
+        print('widthx = ', self.widthx)
+        print('probability = ', self.probability)
+
+    def normalize_probability(self):
+        self.probability /= np.sum(self.probability)
+    
+    def current_position(self):
+        position = 0.0
+        for i in range(self.widthx):
+            cur_pos = self.minx + i * self.resolution
+            position += cur_pos * self.probability[i]
+        return position
+    
+    def motion_predict(self, move_length, motion_noise):
+        step = round(move_length / self.resolution) * self.resolution
+        self.minx += step
+        self.maxx += step
+        print('before:', self.probability)
+        self.probability = gaussian_filter1d(self.probability, motion_noise)
+        print('after:', self.probability)
+        # there is no need for total probability, I do this just for security
+        self.normalize_probability()
+        return self.current_position()
+    
+    def measurement_update(self, min_distance, map_data, measurement_noise):
+        # min_distance has been added some noise
+        for i in range(self.widthx): # loop all the estimated positions
+            cur_pos = self.minx + i * self.resolution
+            min_dis = 1e3
+            for j in range(len(map_data)):
+                delta = np.abs(cur_pos - map_data[j])
+                if delta < min_dis:
+                    min_dis = delta
+            # likelihood
+            pdf = 1.0 - norm.cdf(np.abs(min_dis - min_distance), 0.0, measurement_noise)
+            self.probability[i] *= pdf
+        self.normalize_probability()
+        return self.current_position()
+
+class hfrobot(object):
     def __init__(self, 
-                initial_position_noise, 
                 start_position, 
                 end_position, 
                 velocity, 
                 motion_noise, 
                 measurement_noise, 
                 sensor_range,
-                map_data):
-        self.position = start_position + np.random.randn() * initial_position_noise
+                map_data, 
+                grid_map):
         self.start_position = start_position # m
         self.end_position = end_position # m
         self.velocity = velocity # m/s
@@ -25,11 +83,13 @@ class kfrobot(object):
 
         self.motion_noise = motion_noise
         self.measurement_noise = measurement_noise
-        self.position_noise = initial_position_noise
 
         self.sensor_range = sensor_range
         self.map = map_data
 
+        self.grid_map = copy.deepcopy(grid_map)
+        self.position = self.grid_map.current_position()
+    
     def init(self):
         self.position = 0.0
         self.start_position = 0.0
@@ -40,26 +100,24 @@ class kfrobot(object):
 
         self.motion_noise = 0.0
         self.measurement_noise = 0.0
-        self.position_noise = 0.0 
         
         self.sensor_range = 0.0
         self.map = np.array([0.0])
-        
+
+        self.grid_map = copy.deepcopy(grid_map(0.0, 10.0, 1.0))
+    
     def motion(self):
         self.groundtruth += self.velocity * 1.0
-
+    
     def motion_predict(self):
         self.motion()
         # print('motion_predict:current position', self.position)
         # print('motion_predict:groundtruth', self.groundtruth)
-        self.position += self.velocity * 1.0 + np.random.randn() * self.motion_noise
-        var0 = self.position_noise ** 2
-        var1 = self.motion_noise ** 2
-        self.position_noise = np.sqrt(var0 + var1)
-
-    # the sensor can only know one door at the same time
-    # so we select the closest door
+        move_length = self.velocity * 1.0 + np.random.randn() * self.motion_noise
+        self.position = self.grid_map.motion_predict(move_length, self.motion_noise)
+    
     def measurement(self):
+        # find what the robot senses
         min_distance = 1e3
         min_door = 1e3
         ret = False
@@ -72,22 +130,13 @@ class kfrobot(object):
         return ret, min_distance, min_door
     
     def measurement_update(self):
-        ret, min_distance, door_position = self.measurement()
-        min_distance += np.random.randn() * self.measurement_noise
-        # print('measurement_update:current position', self.position)
-        # print('measurement_update:groundtruth', self.groundtruth)
+        ret, min_distance, _ = self.measurement()
         if ret:
-            mu0 = self.position
-            mu1 = door_position - min_distance
-            print('measured position', mu1) 
-            var0 = self.position_noise ** 2
-            var1 = self.measurement_noise ** 2
-            self.position = (mu0 * var1 + mu1 * var0) / (var0 + var1)
-            std = 1.0 / (1.0 / var0 + 1.0 / var1)
-            self.position_noise = np.sqrt(std)
+            print('measurement success')
+            min_distance += np.random.randn() * self.measurement_noise
+            self.position = self.grid_map.measurement_update(min_distance, self.map, self.measurement_noise)
         return ret
 
-    
 def draw_robot(cur_pos, road_line):
     p0_x = cur_pos
     p0_y = road_line
@@ -132,23 +181,49 @@ def draw_robot_positions(robot_positions_with_noise, road_line):
         res.append(draw_robot(item[0], road_line))
     return res
 
-def gaussian_entropy(sig):
-    entropy = np.log(sig * np.sqrt(2 * np.pi * np.e))
-    return entropy
+def histogram_entropy(grid_map):
+    min_prob = 1e-9
+    res = 0.0
+    for item in grid_map.probability:
+        if item > min_prob:
+            res += item * np.log(item)
+    return -res
 
 def draw_robot_entropy(robot_groundtruths, robot_positions_with_noise):
     res = np.zeros((2, len(robot_groundtruths)))
     for idx in range(res.shape[1]):
         res[0, idx] = robot_groundtruths[idx]
-        item = robot_positions_with_noise[idx]
-        res[1, idx] = gaussian_entropy(item[1])
+        item = copy.deepcopy(robot_positions_with_noise[idx])
+        res[1, idx] = histogram_entropy(item[1])
+    return res
+
+def draw_robot_grid_map(grid_map):
+    res = np.zeros((2, 4 * grid_map.widthx))
+    index = 0
+    for i in range(grid_map.widthx):
+        x = grid_map.minx + i * grid_map.resolution
+        y = 0
+        res[0, index] = x
+        res[1, index] = y
+        index += 1
+
+        res[0, index] = x
+        res[1, index] = y + grid_map.probability[i]
+        index += 1
+
+        res[0, index] = x + grid_map.resolution
+        res[1, index] = y + grid_map.probability[i]
+        index += 1
+
+        res[0, index] = x + grid_map.resolution
+        res[1, index] = y
+        index += 1
     return res
 
 def draw_robot_positions_with_noise(robot_positions_with_noise):
-    bin_num = 50
     res = []
     for item in robot_positions_with_noise:
-        res.append(draw_gaussian(bin_num, item[0], item[1]))
+        res.append(draw_robot_grid_map(item[1]))
     return res
 
 def draw_door(cur_pos, road_line):
@@ -233,41 +308,48 @@ class update_draw(object):
         return self.lines
 
 def main():
-    initial_position_noise = np.sqrt(0.09)
     start_position = 0.0
     end_position = 50.0
     velocity = 0.5
-    motion_noise = np.sqrt(0.04)
+    motion_noise = np.sqrt(1.2)
     measurement_noise = np.sqrt(0.5)
     sensor_range = 0.1
     doors = np.array([5.0, 10.0, 15.0, 25.0, 40.0])
 
     road_line = 1.5
 
-    kf_robot = kfrobot(initial_position_noise, 
-                start_position, 
+    hf_grid_map = copy.deepcopy(grid_map(0.0, 9.5, 0.5))
+
+    hf_robot = hfrobot(start_position, 
                 end_position, 
                 velocity, 
                 motion_noise, 
                 measurement_noise, 
                 sensor_range,
-                doors)
+                doors,
+                hf_grid_map)
+
     loop_num = int((end_position - start_position) / velocity)
 
     # dynamic
     robot_positions_with_noise = []
     robot_groundtruths = []
-    robot_positions_with_noise.append(np.array([kf_robot.position, kf_robot.position_noise]))
-    robot_groundtruths.append(kf_robot.groundtruth)
+    # hf_robot.grid_map.print()
+    robot_positions_with_noise.append(np.array([hf_robot.position, copy.deepcopy(hf_robot.grid_map) ]))
+    robot_groundtruths.append(hf_robot.groundtruth)
+
     for loop in range(loop_num):
-        ret = kf_robot.measurement_update()
+        # print(hf_robot.position)
+        ret = hf_robot.measurement_update()
         if ret:
-            robot_positions_with_noise.append(np.array([kf_robot.position, kf_robot.position_noise]))
-            robot_groundtruths.append(kf_robot.groundtruth)
+            # hf_robot.grid_map.print()
+            robot_positions_with_noise.append(np.array([hf_robot.position, copy.deepcopy(hf_robot.grid_map) ]))
+            robot_groundtruths.append(hf_robot.groundtruth)
         
-        kf_robot.motion_predict()
-        robot_positions_with_noise.append(np.array([kf_robot.position, kf_robot.position_noise]))
-        robot_groundtruths.append(kf_robot.groundtruth)
+        hf_robot.motion_predict()
+        # hf_robot.grid_map.print()
+        robot_positions_with_noise.append(np.array([hf_robot.position, copy.deepcopy(hf_robot.grid_map) ]))
+        robot_groundtruths.append(hf_robot.groundtruth)
     
     # convert data for drawing
     d_groundtruths = draw_robot_groundtruths(robot_groundtruths, road_line)
