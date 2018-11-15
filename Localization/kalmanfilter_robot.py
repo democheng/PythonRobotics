@@ -65,7 +65,7 @@ class kfrobot(object):
         ret = False
         for item in self.map:
             delta = item - self.groundtruth
-            if delta >= 0.0 and delta <= self.sensor_range:
+            if delta >= 0.0 and delta <= self.sensor_range and delta < min_distance:
                 ret = True
                 min_distance = delta
                 min_door = item
