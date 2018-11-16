@@ -212,7 +212,7 @@ def draw_robot_particle_map(particle_map):
         index += 1
 
         res[0, index] = x
-        res[1, index] = y + particle_map.weight[i]
+        res[1, index] = y + particle_map.weight[i] * 10.0
         index += 1
 
         res[0, index] = x
@@ -374,8 +374,8 @@ def main():
                 d_groundtruths, d_groundtruths_with, d_robot_positions, d_doors, d_road_line,
                 d_positions_with_noise, d_doors_with_noise, d_entropy)
     # call the animator.  blit=True means only re-draw the parts that have changed.
-    anim = FuncAnimation(fig, ud, frames=loop_num, interval=500, blit=True)
-    # anim.save('histogramfilter.gif', dpi=80, writer='imagemagick')
+    anim = FuncAnimation(fig, ud, frames=loop_num, interval=200, blit=True)
+    # anim.save('particlefilter.gif', dpi=80, writer='imagemagick')
     plt.show()
 
 if __name__ == '__main__':
