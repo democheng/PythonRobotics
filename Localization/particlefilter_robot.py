@@ -74,8 +74,20 @@ class particle_map():
         return self.current_position()
     
     def particle_map_entropy(self):
-        var = np.var(self.position * self.weight)
-        return gaussian_entropy(var)
+        minx = self.position[np.argmin(self.position)]
+        maxx = self.position[np.argmax(self.position)]
+        bins = np.arange(minx, maxx + 0.5, 0.5)
+        idx = np.digitize(self.position, bins) - 1
+        counts = np.zeros(len(bins))
+        for i in idx:
+            counts[i] += 1.0
+        if np.sum(counts) != self.number:
+            print('np.sum(counts) != self.number')
+            sys.exit(0)
+        counts /= np.sum(counts)
+        counts = counts[counts != 0]
+        entropy = -np.sum(counts * np.log(counts))
+        return entropy
 
 class pfrobot(object):
     def __init__(self, 
