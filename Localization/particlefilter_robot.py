@@ -322,7 +322,7 @@ def main():
 
     road_line = 1.5
 
-    pf_particle_map = copy.deepcopy(particle_map(0.0, 9.5, 30))
+    pf_particle_map = copy.deepcopy(particle_map(0.0, 9.5, 100))
 
     pf_robot = pfrobot(start_position, 
                 end_position, 
@@ -374,7 +374,7 @@ def main():
                 d_groundtruths, d_groundtruths_with, d_robot_positions, d_doors, d_road_line,
                 d_positions_with_noise, d_doors_with_noise, d_entropy)
     # call the animator.  blit=True means only re-draw the parts that have changed.
-    anim = FuncAnimation(fig, ud, frames=loop_num, interval=200, blit=True)
+    anim = FuncAnimation(fig, ud, frames=loop_num, interval=500, blit=True)
     # anim.save('histogramfilter.gif', dpi=80, writer='imagemagick')
     plt.show()
 
