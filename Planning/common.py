@@ -77,3 +77,12 @@ class robot_map(object):
                 c = self.bool_map.shape[1] - 1 - col
                 if self.bool_map[r, c] == False:
                     return r, c
+
+def get_result_path(unique_id, id_map, parent_map, target_row, target_col):
+    res_path = []
+    cur = unique_id[target_row, target_col]
+    while cur != None and parent_map[cur] != None:
+        res_path.append(id_map[cur])
+        cur = parent_map[cur]
+    res_path.append(id_map[cur])
+    return res_path

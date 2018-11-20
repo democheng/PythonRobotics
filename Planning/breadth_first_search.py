@@ -10,6 +10,16 @@ from common import *
 
 def breadth_first_search(robotmap, row, col, target_row, target_col):
     is_visited = np.zeros(robotmap.shape, dtype=bool)
+    unique_id = np.zeros(robotmap.shape)
+    id_map = {}
+    count = 0
+    for i in range(robotmap.shape[0]):
+        for j in range(robotmap.shape[1]):
+            unique_id[i, j] = count
+            id_map[count] = [i, j]
+            count += 1
+    parent_map = {unique_id[row, col]:None}
+
     ret = False
     queue = deque([[row, col]])
     dfs_path = []
@@ -23,7 +33,8 @@ def breadth_first_search(robotmap, row, col, target_row, target_col):
         
         if row == target_row and col == target_col:
             ret = True
-            return ret, dfs_path
+            res_path = get_result_path(unique_id, id_map, parent_map, target_row, target_col)
+            return ret, dfs_path, res_path
         
         # ------add neighbors-------
         # up 
@@ -31,23 +42,27 @@ def breadth_first_search(robotmap, row, col, target_row, target_col):
             is_visited[row - 1, col] != True and \
             robotmap.bool_map[row - 1, col] != True:
             queue.append([row - 1, col])
+            parent_map[ unique_id[row - 1, col] ] = unique_id[row, col]
         #left
         if col - 1 >= 0 and \
             is_visited[row, col - 1] != True and \
             robotmap.bool_map[row, col - 1] != True:
             queue.append([row, col - 1])
+            parent_map[ unique_id[row, col - 1] ] = unique_id[row, col]
         # down
         if row + 1 < robotmap.bool_map.shape[0] and \
             is_visited[row + 1, col] != True and \
             robotmap.bool_map[row + 1, col] != True:
             queue.append([row + 1, col])
+            parent_map[ unique_id[row + 1, col] ] = unique_id[row, col]
         # right
         if col + 1 < robotmap.bool_map.shape[1] and \
             is_visited[row, col + 1] != True and \
             robotmap.bool_map[row, col + 1] != True:
             queue.append([row, col + 1])
+            parent_map[ unique_id[row, col + 1] ] = unique_id[row, col]
 
-    return ret, dfs_path
+    return ret, dfs_path, parent_map
 
 
 def main():
@@ -56,11 +71,12 @@ def main():
     row, col = robotmap.get_start_position()
     target_row, target_col = robotmap.get_target_position()
     
-    ret, dfs_path = breadth_first_search(robotmap, row, col, target_row, target_col)
+    ret, dfs_path, res_path = breadth_first_search(robotmap, row, col, target_row, target_col)
     print('start position:', row, col)
     print('target position:', target_row, target_col)
 
     dfs_path = np.array(dfs_path)
+    res_path = np.array(res_path)
 
     if ret == False:
         print('can not find a path')
@@ -86,6 +102,15 @@ def main():
     # draw path
     for i in range(1, dfs_path.shape[0] - 1):
         image[dfs_path[i, 0], dfs_path[i, 1]] = 100
+        im = plt.imshow(image, cmap=plt.cm.get_cmap('jet'), animated=True, interpolation='nearest')
+        images.append([im])
+    
+    image = robotmap.get_image()
+    image[row, col] = 50
+    image[target_row, target_col] = 200
+    for i in range(1, res_path.shape[0] - 1):
+        image[res_path[i, 0], res_path[i, 1]] = 150
+    for i in range(10):
         im = plt.imshow(image, cmap=plt.cm.get_cmap('jet'), animated=True, interpolation='nearest')
         images.append([im])
     ani = ArtistAnimation(fig, images, interval=len(images), blit=True,
