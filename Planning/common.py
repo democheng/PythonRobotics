@@ -61,17 +61,13 @@ class robot_map(object):
         img *= 255
         return img
 
-    # start position is closest to (0, 0)
+    # start position is totally random
     def get_start_position(self):
-        row = self.bool_map.shape[0] // 5
-        col = self.bool_map.shape[1] // 5
-        while row < self.bool_map.shape[0] and \
-            col < self.bool_map.shape[1] and \
-            row >= 0 and col >= 0:
+        while True:
+            row = np.random.randint(1, self.bool_map.shape[0] - 1)
+            col = np.random.randint(1, self.bool_map.shape[0] - 1)
             if self.bool_map[row, col] == False:
                 return row, col
-            row += 1
-            col += 1
 
     # target position is closest to (maxx, maxy)
     def get_target_position(self):
