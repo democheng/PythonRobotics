@@ -131,6 +131,7 @@ def main():
         images.append([im])
     ani = ArtistAnimation(fig, images, interval=len(images), blit=True,
                                     repeat_delay=100)
+    # ani.save('a_star_search.gif', dpi=80, writer='imagemagick')
     plt.show()
 
 if __name__ == '__main__':
