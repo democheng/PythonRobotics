@@ -71,12 +71,17 @@ class robot_map(object):
 
     # target position is closest to (maxx, maxy)
     def get_target_position(self):
-        for row in range(self.bool_map.shape[0]):
-            for col in range(self.bool_map.shape[1]):
-                r = self.bool_map.shape[0] - 1 - row
-                c = self.bool_map.shape[1] - 1 - col
-                if self.bool_map[r, c] == False:
-                    return r, c
+        while True:
+            row = np.random.randint(1, self.bool_map.shape[0] - 1)
+            col = np.random.randint(1, self.bool_map.shape[0] - 1)
+            if self.bool_map[row, col] == False:
+                return row, col
+        # for row in range(self.bool_map.shape[0]):
+        #     for col in range(self.bool_map.shape[1]):
+        #         r = self.bool_map.shape[0] - 1 - row
+        #         c = self.bool_map.shape[1] - 1 - col
+        #         if self.bool_map[r, c] == False:
+        #             return r, c
 
 def get_result_path(unique_id, id_map, parent_map, target_row, target_col):
     res_path = []
