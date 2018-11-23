@@ -20,18 +20,19 @@ def dynamic_programming(robotmap, row, col, target_row, target_col):
     parent_map = {unique_id[row, col]:None}
 
     move = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
-    state_map = np.ones((robotmap.shape[0], robotmap.shape[1])) * 1e9
+    max_number = robotmap.shape[0] * robotmap.shape[1]
+    state_map = np.ones((robotmap.shape[0], robotmap.shape[1])) * max_number
     changed = True
     dp_path = []
+
     while changed:
         changed = False
         for i in range(robotmap.shape[0]):
             for j in range(robotmap.shape[1]):
-                if i == target_row and j == target_col:
-                    if state_map[i, j] > 0:
-                        parent_map[unique_id[target_row, target_col]] = None
-                        state_map[i, j] = 0
-                        changed = True
+                if i == target_row and j == target_col and state_map[i, j] > 0:
+                    parent_map[unique_id[target_row, target_col]] = None
+                    state_map[i, j] = 0
+                    changed = True
                 elif robotmap.bool_map[i, j] == False:
                     for k in range(move.shape[0]):
                         ii = i + move[k, 0]
@@ -42,9 +43,10 @@ def dynamic_programming(robotmap, row, col, target_row, target_col):
                                 changed = True
                                 state_map[i, j] = vv
                                 parent_map[ unique_id[i, j] ] = unique_id[ii, jj]
+                                dp_path.append([i, j])
     
     ret = False
-    if state_map[row, col] == 1e9:
+    if state_map[row, col] == max_number:
         return ret, dp_path, parent_map
     
     ret = True
@@ -53,16 +55,16 @@ def dynamic_programming(robotmap, row, col, target_row, target_col):
 
 
 def main():
-    robotmap = robot_map(40, 40, 0.099, 0.9)
+    robotmap = robot_map(20, 20, 0.099, 0.9)
     robotmap.generate_map()
     row, col = robotmap.get_start_position()
     target_row, target_col = robotmap.get_target_position()
     
     print('start position:', row, col)
     print('target position:', target_row, target_col)
-    ret, dfs_path, res_path = dynamic_programming(robotmap, row, col, target_row, target_col)
+    ret, dp_path, res_path = dynamic_programming(robotmap, row, col, target_row, target_col)
 
-    dfs_path = np.array(dfs_path)
+    dp_path = np.array(dp_path)
     res_path = np.array(res_path)
     print('length of res_path = ', len(res_path) - 1)
 
@@ -81,6 +83,8 @@ def main():
     ax.set_title('maze')
 
     images = []
+    max_number = robotmap.shape[0] * robotmap.shape[1]
+
     image = robotmap.get_image()
     # draw start and target
     image[row, col] = 50
@@ -88,11 +92,13 @@ def main():
     im = plt.imshow(image, cmap=plt.cm.get_cmap('jet'), animated=True, interpolation='nearest')
     images.append([im])
     # draw path
-    for i in range(1, dfs_path.shape[0] - 1):
-        image[dfs_path[i, 0], dfs_path[i, 1]] = 100
+    for i in range(dp_path.shape[0]):
+        image[dp_path[i, 0], dp_path[i, 1]] = 100
+        image[row, col] = 50
+        image[target_row, target_col] = 200
         im = plt.imshow(image, cmap=plt.cm.get_cmap('jet'), animated=True, interpolation='nearest')
         images.append([im])
-    
+
     image = robotmap.get_image()
     image[row, col] = 50
     image[target_row, target_col] = 200
@@ -101,6 +107,7 @@ def main():
     for i in range(10):
         im = plt.imshow(image, cmap=plt.cm.get_cmap('jet'), animated=True, interpolation='nearest')
         images.append([im])
+
     ani = ArtistAnimation(fig, images, interval=len(images), blit=True,
                                     repeat_delay=1)
     # ani.save('dynamic_programming.gif', dpi=80, writer='imagemagick')
