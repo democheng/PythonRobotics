@@ -9,31 +9,6 @@ from collections import deque
 from common import * 
 
 def dynamic_programming(robotmap, row, col, target_row, target_col):
-    move = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
-    state_map = np.ones((robotmap.shape[0], robotmap.shape[1])) * 1e9
-    changed = True
-    while changed:
-        changed = False
-        for i in range(robotmap.shape[0]):
-            for j in range(robotmap.shape[1]):
-                if i == target_row and j == target_col:
-                    if state_map[i, j] > 0:
-                        state_map[i, j] = 0
-                        changed = True
-                elif robotmap.bool_map[i ,j] == False:
-                    for k in range(move.shape[0]):
-                        ii = i + move[k, 0]
-                        jj = j + move[k, 1]
-                        if ii >= 0 and jj >= 0 and ii < robotmap.shape[0] and jj < robotmap.shape[1]:
-                            vv = state_map[ii, jj] + 1
-                            if vv < state_map[i, j]:
-                                changed = True
-                                state_map[i, j] = vv
-    print(state_map)
-    min_distance = state_map[row, col] - state_map[target_row, target_col] 
-    print('min_distance = ', min_distance)
-
-    is_visited = np.zeros(robotmap.shape, dtype=bool)
     unique_id = np.zeros(robotmap.shape)
     id_map = {}
     count = 0
@@ -44,49 +19,37 @@ def dynamic_programming(robotmap, row, col, target_row, target_col):
             count += 1
     parent_map = {unique_id[row, col]:None}
 
+    move = np.array([[-1, 0], [0, -1], [1, 0], [0, 1]])
+    state_map = np.ones((robotmap.shape[0], robotmap.shape[1])) * 1e9
+    changed = True
+    dp_path = []
+    while changed:
+        changed = False
+        for i in range(robotmap.shape[0]):
+            for j in range(robotmap.shape[1]):
+                if i == target_row and j == target_col:
+                    if state_map[i, j] > 0:
+                        parent_map[unique_id[target_row, target_col]] = None
+                        state_map[i, j] = 0
+                        changed = True
+                elif robotmap.bool_map[i, j] == False:
+                    for k in range(move.shape[0]):
+                        ii = i + move[k, 0]
+                        jj = j + move[k, 1]
+                        if ii >= 0 and jj >= 0 and ii < robotmap.shape[0] and jj < robotmap.shape[1]:
+                            vv = state_map[ii, jj] + 1
+                            if vv < state_map[i, j]:
+                                changed = True
+                                state_map[i, j] = vv
+                                parent_map[ unique_id[i, j] ] = unique_id[ii, jj]
+    
     ret = False
-    queue = deque([[row, col]])
-    dfs_path = []
-    while(len(queue) > 0):
-        idx = queue.popleft()
-        row = idx[0]
-        col = idx[1]
-        if is_visited[row, col] != True:
-            is_visited[row, col] = True
-            dfs_path.append([row, col])
-        
-        if row == target_row and col == target_col:
-            ret = True
-            res_path = get_result_path(unique_id, id_map, parent_map, target_row, target_col)
-            return ret, dfs_path, res_path
-        
-        # ------add neighbors-------
-        # up 
-        if row - 1 >= 0 and \
-            is_visited[row - 1, col] != True and \
-            robotmap.bool_map[row - 1, col] != True:
-            queue.append([row - 1, col])
-            parent_map[ unique_id[row - 1, col] ] = unique_id[row, col]
-        #left
-        if col - 1 >= 0 and \
-            is_visited[row, col - 1] != True and \
-            robotmap.bool_map[row, col - 1] != True:
-            queue.append([row, col - 1])
-            parent_map[ unique_id[row, col - 1] ] = unique_id[row, col]
-        # down
-        if row + 1 < robotmap.bool_map.shape[0] and \
-            is_visited[row + 1, col] != True and \
-            robotmap.bool_map[row + 1, col] != True:
-            queue.append([row + 1, col])
-            parent_map[ unique_id[row + 1, col] ] = unique_id[row, col]
-        # right
-        if col + 1 < robotmap.bool_map.shape[1] and \
-            is_visited[row, col + 1] != True and \
-            robotmap.bool_map[row, col + 1] != True:
-            queue.append([row, col + 1])
-            parent_map[ unique_id[row, col + 1] ] = unique_id[row, col]
-
-    return ret, dfs_path, parent_map
+    if state_map[row, col] == 1e9:
+        return ret, dp_path, parent_map
+    
+    ret = True
+    res_path = get_result_path(unique_id, id_map, parent_map, row, col)
+    return ret, dp_path, res_path
 
 
 def main():
@@ -95,9 +58,9 @@ def main():
     row, col = robotmap.get_start_position()
     target_row, target_col = robotmap.get_target_position()
     
-    ret, dfs_path, res_path = dynamic_programming(robotmap, row, col, target_row, target_col)
     print('start position:', row, col)
     print('target position:', target_row, target_col)
+    ret, dfs_path, res_path = dynamic_programming(robotmap, row, col, target_row, target_col)
 
     dfs_path = np.array(dfs_path)
     res_path = np.array(res_path)
