@@ -83,7 +83,6 @@ def main():
     ax.set_title('maze')
 
     images = []
-    max_number = robotmap.shape[0] * robotmap.shape[1]
 
     image = robotmap.get_image()
     # draw start and target

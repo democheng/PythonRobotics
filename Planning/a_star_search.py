@@ -82,7 +82,7 @@ def a_star_search(robotmap, row, col, target_row, target_col):
 
 
 def main():
-    robotmap = robot_map(40, 40, 0.09, 0.9)
+    robotmap = robot_map(20, 20, 0.09, 0.9)
     robotmap.generate_map()
     row, col = robotmap.get_start_position()
     target_row, target_col = robotmap.get_target_position()

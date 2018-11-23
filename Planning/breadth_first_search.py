@@ -66,7 +66,7 @@ def breadth_first_search(robotmap, row, col, target_row, target_col):
 
 
 def main():
-    robotmap = robot_map(40, 40, 0.099, 0.9)
+    robotmap = robot_map(20, 20, 0.099, 0.9)
     robotmap.generate_map()
     row, col = robotmap.get_start_position()
     target_row, target_col = robotmap.get_target_position()

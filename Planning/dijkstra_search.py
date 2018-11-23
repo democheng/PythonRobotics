@@ -77,7 +77,7 @@ def dijkstra_search(robotmap, row, col, target_row, target_col):
 
 
 def main():
-    robotmap = robot_map(40, 40, 0.09, 0.9)
+    robotmap = robot_map(20, 20, 0.09, 0.9)
     robotmap.generate_map()
     row, col = robotmap.get_start_position()
     target_row, target_col = robotmap.get_target_position()
@@ -126,7 +126,7 @@ def main():
         images.append([im])
     ani = ArtistAnimation(fig, images, interval=len(images), blit=True,
                                     repeat_delay=100)
-    ani.save('dijkstra_search.gif', dpi=80, writer='imagemagick')
+    # ani.save('dijkstra_search.gif', dpi=80, writer='imagemagick')
     plt.show()
 
 if __name__ == '__main__':
