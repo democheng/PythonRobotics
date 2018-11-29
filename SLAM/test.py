@@ -109,5 +109,5 @@ fig.colorbar(im)
 images.append([im])
 
 ani = ArtistAnimation(fig, images, interval=1, blit=True,
-                                    repeat_delay=1000)
+                                    repeat_delay=10)
 plt.show()
